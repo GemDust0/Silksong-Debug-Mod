@@ -44,11 +44,11 @@ public class SilksongMod : BaseUnityPlugin
     private static ConfigEntry<bool> uncappedRosaries;
     private static ConfigEntry<bool> uncappedShards;
     private static ConfigEntry<bool> canChangeEquipsAnywhere;
+    private static ConfigEntry<bool> infiniteSilk;
+    private static ConfigEntry<bool> infiniteHealth;
+    private static ConfigEntry<bool> invincible;
 
     /* TODO
-     * silkMax
-     * silkRegenMax
-     * silk
      * defeated[]
      * disableSilkAbilities, HasSilkSpecial
      * FleaGames[]
@@ -58,9 +58,6 @@ public class SilksongMod : BaseUnityPlugin
      * HasMarker[]
      * HasMelody[]
      * HasSlabKey[]
-     * health
-     * maxHealth
-     * 
     */
 
     private void Awake()
@@ -198,6 +195,24 @@ public class SilksongMod : BaseUnityPlugin
                 false,
                 "Allows you to change equips anywhere"
             );
+        infiniteSilk = Config.Bind(
+                "Cheats",
+                "Infinite Silk",
+                false,
+                "Whether or not you have infinite silk"
+            );
+        infiniteHealth = Config.Bind(
+                "Cheats",
+                "Infinite Health",
+                false,
+                "Whether or not you have infinite health"
+            );
+        invincible = Config.Bind(
+                "Cheats",
+                "Invincible",
+                false,
+                "Whether or not you are invincible"
+            );
 
         // Bind events
         equippedCrest.SettingChanged += EquippedCrestChanged;
@@ -220,6 +235,8 @@ public class SilksongMod : BaseUnityPlugin
         rosaries.SettingChanged += RosariesChanged;
         shards.SettingChanged += ShardsChanged;
         canChangeEquipsAnywhere.SettingChanged += ChangeAnywhereChanged;
+        infiniteSilk.SettingChanged += InfiniteSilkChanged;
+
 
         logger.LogInfo("Plugin loaded and initialized.");
 
@@ -293,6 +310,8 @@ public class SilksongMod : BaseUnityPlugin
         __instance.hasHarpoonDash = clawline.Value;
         __instance.geo = rosaries.Value;
         __instance.ShellShards = shards.Value;
+        CheatManager.CanChangeEquipsAnywhere = canChangeEquipsAnywhere.Value;
+        __instance.silk = infiniteSilk.Value ? 9 : 0;
 
         __instance.HasSeenNeedolin = true;
         __instance.HasSeenDash = true;
@@ -300,7 +319,6 @@ public class SilksongMod : BaseUnityPlugin
         __instance.HasSeenSuperJump = true;
         __instance.HasSeenGeo = true;
         __instance.HasSeenShellShards = true;
-        CheatManager.CanChangeEquipsAnywhere = canChangeEquipsAnywhere.Value;
     }
 
     // Set values of config to save file when loading an existing one
@@ -357,7 +375,7 @@ public class SilksongMod : BaseUnityPlugin
         rosaries.Value = __instance.geo;
         shards.Value = __instance.ShellShards;
         CheatManager.CanChangeEquipsAnywhere = canChangeEquipsAnywhere.Value;
-
+        __instance.silk = infiniteSilk.Value ? __instance.silkMax : __instance.silk;
     }
 
     // Unlimited Shards and Rosaries
@@ -656,7 +674,45 @@ public class SilksongMod : BaseUnityPlugin
     {
         CheatManager.CanChangeEquipsAnywhere = canChangeEquipsAnywhere.Value;
     }
+    private static void InfiniteSilkChanged(object sender, EventArgs args)
+    {
+        if (infiniteSilk.Value)
+        {
+            PlayerData.instance.silk = PlayerData.instance.silkMax;
+        }
+    }
 
+    private static void InvincibleChanged(object sender, EventArgs args)
+    {
+        PlayerData.instance.isInvincible = invincible.Value;
+    }
+
+    [HarmonyPrefix]
+    [HarmonyPatch(typeof(HeroController), "TakeSilk", new System.Type[] {typeof(int), typeof(SilkSpool.SilkTakeSource)})]
+    private static void TakeSilkPrefix(HeroController __instance, ref int amount, SilkSpool.SilkTakeSource source)
+    {
+        if (infiniteSilk.Value)
+        {
+            amount = 0;
+        }
+    }
+
+    [HarmonyPrefix]
+    [HarmonyPatch(typeof(PlayerData), "TakeHealth")]
+    private static void TakeHealthPrefix(PlayerData __instance, ref int amount, bool hasBlueHealth, bool allowFracturedMaskBreak)
+    {
+        if (infiniteHealth.Value)
+        {
+            amount = 0;
+        }
+    }
+
+    [HarmonyPrefix]
+    [HarmonyPatch(typeof(HeroController), "TakeDamage")]
+    private static bool TakeDamagePrefix(HeroController __instance, GameObject go, CollisionSide damageSide, int damageAmount, HazardType hazardType, DamagePropertyFlags damagePropertyFlags = DamagePropertyFlags.None)
+    {
+        return !invincible.Value;
+    }
 
     [HarmonyPostfix]
     [HarmonyPatch(typeof(ToolItemManager), "SetEquippedCrest")]
