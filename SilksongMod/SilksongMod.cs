@@ -18,7 +18,7 @@ using static PlayerDataTest;
 using static SteelSoulQuestSpot;
 using static ToolCrest;
 
-[BepInPlugin("SilksongDebugMod", "Silksong Debug Mod", "1.0.0")]
+[BepInPlugin("SilksongDebugMod", "Silksong Debug Mod", "1.0")]
 public class SilksongMod : BaseUnityPlugin
 {
     private static BepInEx.Logging.ManualLogSource logger;
