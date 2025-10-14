@@ -8,7 +8,9 @@ using HutongGames.PlayMaker.Actions;
 using InControl;
 using InControl.UnityDeviceProfiles;
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Reflection.Emit;
 using UnityEngine;
 using UnityEngine.Assertions.Must;
@@ -47,6 +49,8 @@ public class SilksongMod : BaseUnityPlugin
     private static ConfigEntry<bool> infiniteSilk;
     private static ConfigEntry<bool> infiniteHealth;
     private static ConfigEntry<bool> invincible;
+    private static ConfigEntry<bool> infiniteBeastHeal;
+    private static ConfigEntry<bool> defeatedMossMother;
 
     /* TODO
      * defeated[]
@@ -213,6 +217,18 @@ public class SilksongMod : BaseUnityPlugin
                 false,
                 "Whether or not you are invincible"
             );
+        infiniteBeastHeal = Config.Bind(
+                "Cheats",
+                "Infinite Beast Heal",
+                false,
+                "Whether or not you can heal infinitely with Beast Crest"
+            );
+        defeatedMossMother = Config.Bind(
+                "Bosses",
+                "Defeated Moss Mother",
+                false,
+                "Whether or not Moss Mother has been defeated"
+            );
 
         // Bind events
         equippedCrest.SettingChanged += EquippedCrestChanged;
@@ -236,6 +252,7 @@ public class SilksongMod : BaseUnityPlugin
         shards.SettingChanged += ShardsChanged;
         canChangeEquipsAnywhere.SettingChanged += ChangeAnywhereChanged;
         infiniteSilk.SettingChanged += InfiniteSilkChanged;
+        defeatedMossMother.SettingChanged += (sender, args) => { PlayerData.instance.defeatedMossMother = defeatedMossMother.Value;};
 
 
         logger.LogInfo("Plugin loaded and initialized.");
@@ -312,6 +329,7 @@ public class SilksongMod : BaseUnityPlugin
         __instance.ShellShards = shards.Value;
         CheatManager.CanChangeEquipsAnywhere = canChangeEquipsAnywhere.Value;
         __instance.silk = infiniteSilk.Value ? 9 : 0;
+        __instance.defeatedMossMother = defeatedMossMother.Value;
 
         __instance.HasSeenNeedolin = true;
         __instance.HasSeenDash = true;
@@ -376,6 +394,7 @@ public class SilksongMod : BaseUnityPlugin
         shards.Value = __instance.ShellShards;
         CheatManager.CanChangeEquipsAnywhere = canChangeEquipsAnywhere.Value;
         __instance.silk = infiniteSilk.Value ? __instance.silkMax : __instance.silk;
+        defeatedMossMother.Value = __instance.defeatedMossMother;
     }
 
     // Unlimited Shards and Rosaries
@@ -718,6 +737,29 @@ public class SilksongMod : BaseUnityPlugin
     [HarmonyPatch(typeof(ToolItemManager), "SetEquippedCrest")]
     private static void SetEquippedCrestPostfix(ToolItemManager __instance, string crestId){
         equippedCrest.Value = crestId;
+    }
+
+    [HarmonyPrefix]
+    [HarmonyPatch(typeof(HeroController), "NailHitEnemy")]
+    private static void NailHitEnemyPrefix(HeroController __instance, HealthManager enemyHealth, HitInstance hitInstance)
+    {
+        if (infiniteBeastHeal.Value && hitInstance.RageHit)
+        {
+            PropertyInfo spriteFlash = typeof(HeroController).GetProperty("spriteFlash");
+            PropertyInfo RageModeHealCount = typeof(HeroController).GetProperty("warriorState.RageModeHealCount");
+            if (enemyHealth.ShouldIgnore(HealthManager.IgnoreFlags.RageHeal))
+            {
+                return;
+            }
+
+            if (__instance.WarriorState.RageModeHealCount >= __instance.GetRageModeHealCap() && __instance.playerData.health < __instance.playerData.CurrentMaxHealth)
+            {
+                __instance.AddHealth(1);
+                Effects.RageHitHealthEffectPrefab.Spawn(enemyHealth.transform.position);
+                new SpriteFlash().flashFocusHeal();
+                typeof(HeroController).InvokeMember("RestartWarriorRageEffect", BindingFlags.InvokeMethod | BindingFlags.NonPublic | BindingFlags.Instance, null, __instance, null);
+            }
+        }
     }
 
     void Update()
