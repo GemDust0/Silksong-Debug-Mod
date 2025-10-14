@@ -50,7 +50,6 @@ public class SilksongMod : BaseUnityPlugin
     private static ConfigEntry<bool> infiniteHealth;
     private static ConfigEntry<bool> invincible;
     private static ConfigEntry<bool> infiniteBeastHeal;
-    private static ConfigEntry<bool> defeatedMossMother;
 
     /* TODO
      * defeated[]
@@ -71,7 +70,7 @@ public class SilksongMod : BaseUnityPlugin
                 "Crest Settings",
                 "Equipped Crest",
                 "Hunter",
-                new ConfigDescription("The Crest you have equipped. Will automatically unlock the crest if not yet unlocked.", new AcceptableValueList<string>(new string[] { "Hunter", "Hunter_v2", "Hunter_v3", "Reaper", "Wanderer", "Warrior", "Toolmaster", "Witch", "Spell" }))
+                new ConfigDescription("The Crest you have equipped. Will automatically unlock the crest if not yet unlocked.", new AcceptableValueList<string>(new string[] { "Hunter", "Hunter_v2", "Hunter_v3", "Reaper", "Wanderer", "Warrior", "Toolmaster", "Witch", "Spell", "Cloakless", "Cursed"}))
             );
         unlockedHunter = Config.Bind(
                 "Crest Settings",
@@ -223,12 +222,6 @@ public class SilksongMod : BaseUnityPlugin
                 false,
                 "Whether or not you can heal infinitely with Beast Crest"
             );
-        defeatedMossMother = Config.Bind(
-                "Bosses",
-                "Defeated Moss Mother",
-                false,
-                "Whether or not Moss Mother has been defeated"
-            );
 
         // Bind events
         equippedCrest.SettingChanged += EquippedCrestChanged;
@@ -252,7 +245,6 @@ public class SilksongMod : BaseUnityPlugin
         shards.SettingChanged += ShardsChanged;
         canChangeEquipsAnywhere.SettingChanged += ChangeAnywhereChanged;
         infiniteSilk.SettingChanged += InfiniteSilkChanged;
-        defeatedMossMother.SettingChanged += (sender, args) => { PlayerData.instance.defeatedMossMother = defeatedMossMother.Value;};
 
 
         logger.LogInfo("Plugin loaded and initialized.");
